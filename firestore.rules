@@ -1,0 +1,182 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+
+    function isValidUser(data) {
+      return data.keys().size() == 4
+        && data.keys().hasAll(['name', 'email', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() <= 100
+        && data.email is string && data.email.size() <= 100
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn()
+        && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidUser(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && incoming().email == request.auth.token.email;
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && isValidUser(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'updatedAt'])
+        && incoming().createdAt == existing().createdAt
+        && incoming().email == existing().email
+        && incoming().updatedAt == request.time;
+    }
+
+    function isValidMemory(data) {
+      return data.keys().size() == 2
+        && data.keys().hasAll(['fact', 'createdAt'])
+        && data.fact is string && data.fact.size() <= 1000
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{userId}/memories/{memoryId} {
+      allow list: if isSignedIn() && request.auth.uid == userId;
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn()
+        && isValidId(userId)
+        && isValidId(memoryId)
+        && request.auth.uid == userId
+        && isValidMemory(incoming())
+        && incoming().createdAt == request.time
+        && exists(/databases/$(database)/documents/users/$(userId));
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidCall(data) {
+      return (data.keys().size() == 5 || data.keys().size() == 6)
+        && data.keys().hasAll(['interruptionCount', 'status', 'createdAt', 'transcriptText'])
+        && data.interruptionCount is number
+        && data.status is string && data.status.size() <= 20
+        && data.transcriptText is string && data.transcriptText.size() <= 500000
+        && data.createdAt is timestamp
+        && data.get('duration', 0) is number
+        && data.get('endedAt', request.time) is timestamp;
+    }
+
+    match /users/{userId}/calls/{callId} {
+      allow list: if isSignedIn() && request.auth.uid == userId;
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn()
+        && isValidId(userId)
+        && isValidId(callId)
+        && request.auth.uid == userId
+        && isValidCall(incoming())
+        && exists(/databases/$(database)/documents/users/$(userId));
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && isValidCall(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['duration', 'interruptionCount', 'status', 'endedAt', 'transcriptText'])
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidMeeting(data) {
+      return data.keys().size() == 2
+        && data.keys().hasAll(['summary', 'createdAt'])
+        && data.summary is string && data.summary.size() <= 500000
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{userId}/meetings/{meetingId} {
+      allow list: if isSignedIn() && request.auth.uid == userId;
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn()
+        && isValidId(userId)
+        && isValidId(meetingId)
+        && request.auth.uid == userId
+        && isValidMeeting(incoming())
+        && incoming().createdAt == request.time
+        && exists(/databases/$(database)/documents/users/$(userId));
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && isValidMeeting(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['summary'])
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidPatient(data) {
+      return data.keys().size() == 8
+        && data.keys().hasAll(['nom', 'prenom', 'dateNaissance', 'adresse', 'medecinTraitant', 'numeroDossier', 'createdAt', 'updatedAt'])
+        && data.nom is string && data.nom.size() <= 100
+        && data.prenom is string && data.prenom.size() <= 100
+        && data.dateNaissance is string && data.dateNaissance.size() <= 100
+        && data.adresse is string && data.adresse.size() <= 300
+        && data.medecinTraitant is string && data.medecinTraitant.size() <= 100
+        && data.numeroDossier is string && data.numeroDossier.size() <= 100
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /users/{userId}/patients/{patientId} {
+      allow list: if isSignedIn() && request.auth.uid == userId;
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn()
+        && isValidId(userId)
+        && isValidId(patientId)
+        && request.auth.uid == userId
+        && isValidPatient(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/users/$(userId));
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && isValidPatient(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['nom', 'prenom', 'dateNaissance', 'adresse', 'medecinTraitant', 'numeroDossier', 'updatedAt'])
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidPatientDocument(data) {
+      return data.keys().size() == 6
+        && data.keys().hasAll(['titre', 'type_document', 'destinataire', 'contenu_formate', 'status', 'createdAt'])
+        && data.titre is string && data.titre.size() <= 200
+        && data.type_document is string && data.type_document.size() <= 100
+        && data.destinataire is string && data.destinataire.size() <= 200
+        && data.contenu_formate is string && data.contenu_formate.size() <= 500000
+        && data.status is string && data.status.size() <= 50
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{userId}/patients/{patientId}/documents/{docId} {
+      allow list: if isSignedIn() && request.auth.uid == userId;
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn()
+        && isValidId(userId)
+        && isValidId(patientId)
+        && isValidId(docId)
+        && request.auth.uid == userId
+        && isValidPatientDocument(incoming())
+        && incoming().createdAt == request.time
+        && exists(/databases/$(database)/documents/users/$(userId)/patients/$(patientId));
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && isValidPatientDocument(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'titre', 'contenu_formate', 'destinataire', 'type_document'])
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+  }
+}

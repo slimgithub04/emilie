@@ -1,0 +1,8 @@
+{
+  "name": "",
+  "description": "",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": []
+}

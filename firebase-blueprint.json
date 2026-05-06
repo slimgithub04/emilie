@@ -1,0 +1,106 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with basic info. Contains PII (email, name) so access is restricted solely to the owner.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      },
+      "required": ["name", "email", "createdAt", "updatedAt"]
+    },
+    "Memory": {
+      "title": "Memory",
+      "description": "A fact or memory stored by the AI about the user.",
+      "type": "object",
+      "properties": {
+        "fact": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["fact", "createdAt"]
+    },
+    "Call": {
+      "title": "Call",
+      "description": "A record of an AI call.",
+      "type": "object",
+      "properties": {
+        "duration": { "type": "number" },
+        "interruptionCount": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "endedAt": { "type": "timestamp" },
+        "transcriptText": { "type": "string" }
+      },
+      "required": ["interruptionCount", "status", "createdAt", "transcriptText"]
+    },
+    "Meeting": {
+      "title": "Meeting",
+      "description": "A generated meeting summary document.",
+      "type": "object",
+      "properties": {
+        "summary": { "type": "string", "maxLength": 500000 },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["summary", "createdAt"]
+    },
+    "Patient": {
+      "title": "Patient",
+      "description": "A patient record from Logosw database.",
+      "type": "object",
+      "properties": {
+        "nom": { "type": "string" },
+        "prenom": { "type": "string" },
+        "dateNaissance": { "type": "string" },
+        "adresse": { "type": "string" },
+        "medecinTraitant": { "type": "string" },
+        "numeroDossier": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "updatedAt": { "type": "timestamp" }
+      },
+      "required": ["nom", "createdAt", "updatedAt"]
+    },
+    "PatientDocument": {
+      "title": "Patient Document",
+      "description": "A generated document for a specific patient.",
+      "type": "object",
+      "properties": {
+        "titre": { "type": "string" },
+        "type_document": { "type": "string" },
+        "destinataire": { "type": "string" },
+        "contenu_formate": { "type": "string" },
+        "createdAt": { "type": "timestamp" },
+        "status": { "type": "string" }
+      },
+      "required": ["titre", "type_document", "destinataire", "contenu_formate", "createdAt", "status"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles. Owner-only access."
+    },
+    "users/{userId}/memories/{memoryId}": {
+      "schema": { "$ref": "#/entities/Memory" },
+      "description": "Long-term memories stored by the AI."
+    },
+    "users/{userId}/calls/{callId}": {
+      "schema": { "$ref": "#/entities/Call" },
+      "description": "User's calls history."
+    },
+    "users/{userId}/meetings/{meetingId}": {
+      "schema": { "$ref": "#/entities/Meeting" },
+      "description": "User's meeting summaries."
+    },
+    "users/{userId}/patients/{patientId}": {
+      "schema": { "$ref": "#/entities/Patient" },
+      "description": "User's patient records synced from Logosw."
+    },
+    "users/{userId}/patients/{patientId}/documents/{docId}": {
+      "schema": { "$ref": "#/entities/PatientDocument" },
+      "description": "Documents generated for a specific patient."
+    }
+  }
+}
